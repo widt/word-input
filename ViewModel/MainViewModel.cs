@@ -19,7 +19,7 @@ public sealed class MainViewModel
 	public event Action Changed;
 
 	private readonly Pronunciation _pronunciation;
-	private readonly string _wordsPath;
+	private readonly bool _randomOrder;
 	private readonly List<WordEntry> _words = [];
 	private readonly List<int> _order = [];
 
@@ -45,17 +45,17 @@ public sealed class MainViewModel
 	public bool HasNext { get; private set; }
 	public string NextWord { get; private set; } = "";
 
-	/// <summary>创建 ViewModel；wordsPath 为词库 JSON 的路径。</summary>
-	public MainViewModel(Pronunciation pronunciation, string wordsPath)
+	/// <summary>创建 ViewModel；randomOrder 决定词条是否随机排序。</summary>
+	public MainViewModel(Pronunciation pronunciation, bool randomOrder)
 	{
 		_pronunciation = pronunciation;
-		_wordsPath = wordsPath;
+		_randomOrder = randomOrder;
 	}
 
-	/// <summary>加载词条并开始第一轮。</summary>
-	public void Start()
+	/// <summary>接收已筛选好的词条并开始第一轮。</summary>
+	public void Start(IReadOnlyList<WordEntry> words)
 	{
-		foreach (var word in WordRepository.Load(_wordsPath))
+		foreach (var word in words)
 		{
 			if (word.Name.Length > 0)
 				_words.Add(word);
@@ -63,20 +63,21 @@ public sealed class MainViewModel
 		Restart();
 	}
 
-	/// <summary>重新洗牌并开始新一轮，清零统计。</summary>
+	/// <summary>按当前排序方式重新排列并开始新一轮，清零统计。</summary>
 	public void Restart()
 	{
 		_order.Clear();
 		for (int i = 0; i < _words.Count; i++)
 			_order.Add(i);
-		Shuffle(_order);
+		if (_randomOrder)
+			Shuffle(_order);
 		_currentPos = _correctCount = _wrongCount = 0;
 		RoundFinished = false;
 		UpdateStats();
 		if (!HasWords)
 		{
 			ProgressText = "";
-			Word = "读取 words.json 失败";
+			Word = "词库读取失败";
 			ShowPlain = true;
 			Judged = false;
 			Result = ResultKind.None;
@@ -130,7 +131,7 @@ public sealed class MainViewModel
 			MoveNext();
 			return;
 		}
-		if (_typed.Length > 0)
+		if (_typed.Length == Word.Length)
 		{
 			_wrongCount++;
 			UpdateStats();

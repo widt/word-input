@@ -1,5 +1,6 @@
 using Godot;
 using System.Text;
+using word_input.Model;
 using word_input.Services;
 using word_input.ViewModel;
 
@@ -8,9 +9,6 @@ namespace word_input.View;
 /// <summary>View 层：把按键翻译成 ViewModel 命令，ViewModel 变化后整体刷新控件。</summary>
 public partial class MainView : Control
 {
-	/// <summary>词库路径，由词库选择场景在切换场景前设置；为空时使用默认词库。</summary>
-	public static string SelectedWordsPath;
-
 	private const string ColorCorrect = "#4caf50";
 	private const string ColorWrong = "#e53935";
 	private const string ColorReveal = "#ff9800";
@@ -46,14 +44,14 @@ public partial class MainView : Control
 		_restartButton = GetNode<Button>("Margin/VBox/RestartButton");
 		_backButton = GetNode<LinkButton>("Margin/VBox/BackButton");
 
-		_vm = new MainViewModel(new Pronunciation(this), SelectedWordsPath ?? "res://words.json");
+		_vm = new MainViewModel(new Pronunciation(this), PracticeSetup.RandomOrder);
 		_vm.Changed += Refresh;
 		_restartButton.Pressed += _vm.Restart;
 		_speakButton.Pressed += _vm.SpeakCurrent;
 		_prevButton.Pressed += _vm.JumpPrev;
 		_nextButton.Pressed += _vm.JumpNext;
 		_backButton.Pressed += OnBack;
-		_vm.Start();
+		_vm.Start(PracticeSetup.Take());
 	}
 
 	/// <summary>返回词库选择场景。</summary>
