@@ -1,16 +1,16 @@
 using Godot;
-using System.ComponentModel;
 using System.Text;
-using word_input.Model;
 using word_input.Services;
 using word_input.ViewModel;
 
 namespace word_input.View;
 
-/// <summary>View 层：把 ViewModel 的属性绑定到控件，把按键翻译成 ViewModel 命令。</summary>
+/// <summary>View 层：把按键翻译成 ViewModel 命令，ViewModel 变化后整体刷新控件。</summary>
 public partial class MainView : Control
 {
-	private const string WordsPath = "res://words.json";
+	/// <summary>词库路径，由词库选择场景在切换场景前设置；为空时使用默认词库。</summary>
+	public static string SelectedWordsPath;
+
 	private const string ColorCorrect = "#4caf50";
 	private const string ColorWrong = "#e53935";
 	private const string ColorReveal = "#ff9800";
@@ -28,7 +28,10 @@ public partial class MainView : Control
 	private Label _resultLabel;
 	private Label _statsLabel;
 	private Button _restartButton;
+	private LinkButton _backButton;
+	private string _lastWord; // 译文区只在换词时重建
 
+	/// <summary>获取控件引用，创建发音服务与 ViewModel，挂接按钮命令后启动第一轮。</summary>
 	public override void _Ready()
 	{
 		_progressLabel = GetNode<Label>("Margin/VBox/ProgressLabel");
@@ -41,17 +44,22 @@ public partial class MainView : Control
 		_resultLabel = GetNode<Label>("Margin/VBox/ResultLabel");
 		_statsLabel = GetNode<Label>("Margin/VBox/StatsLabel");
 		_restartButton = GetNode<Button>("Margin/VBox/RestartButton");
+		_backButton = GetNode<LinkButton>("Margin/VBox/BackButton");
 
-		var pronunciation = new YoudaoPronunciationService(this);
-		_vm = new MainViewModel(new WordRepository(WordsPath), pronunciation);
-		_vm.PropertyChanged += OnViewModelPropertyChanged;
+		_vm = new MainViewModel(new Pronunciation(this), SelectedWordsPath ?? "res://words.json");
+		_vm.Changed += Refresh;
 		_restartButton.Pressed += _vm.Restart;
 		_speakButton.Pressed += _vm.SpeakCurrent;
 		_prevButton.Pressed += _vm.JumpPrev;
 		_nextButton.Pressed += _vm.JumpNext;
+		_backButton.Pressed += OnBack;
 		_vm.Start();
 	}
 
+	/// <summary>返回词库选择场景。</summary>
+	private void OnBack() => GetTree().ChangeSceneToFile("res://main.tscn");
+
+	/// <summary>把按键翻译成 ViewModel 命令：退格删除、回车判定、空格前进/跳过、字母输入。</summary>
 	public override void _UnhandledKeyInput(InputEvent @event)
 	{
 		if (@event is not InputEventKey keyEvent || !keyEvent.Pressed)
@@ -84,55 +92,29 @@ public partial class MainView : Control
 		}
 	}
 
-	// —— 属性绑定 ——
-
-	private void OnViewModelPropertyChanged(object sender, PropertyChangedEventArgs e)
+	/// <summary>读取 ViewModel 全部状态刷新所有控件；译文区仅在换词时重建。</summary>
+	private void Refresh()
 	{
-		switch (e.PropertyName)
+		_progressLabel.Text = _vm.ProgressText;
+		UpdateWordDisplay();
+		UpdateResult();
+		_phoneLabel.Text = _vm.PhoneticsText;
+		_statsLabel.Text = _vm.StatsText;
+		_prevButton.Visible = _vm.HasPrev;
+		_prevButton.Text = $"← {_vm.PrevWord}";
+		_nextButton.Visible = _vm.HasNext;
+		_nextButton.Text = $"{_vm.NextWord} →";
+		_restartButton.Visible = _vm.RoundFinished;
+		if (_vm.RoundFinished)
+			_restartButton.GrabFocus();
+		if (_lastWord != _vm.Word)
 		{
-			case nameof(MainViewModel.ProgressText):
-				_progressLabel.Text = _vm.ProgressText;
-				break;
-			case nameof(MainViewModel.Word):
-			case nameof(MainViewModel.TypedText):
-			case nameof(MainViewModel.Judged):
-			case nameof(MainViewModel.ShowPlain):
-				UpdateWordDisplay();
-				break;
-			case nameof(MainViewModel.Result):
-			case nameof(MainViewModel.CorrectAnswer):
-				UpdateResult();
-				break;
-			case nameof(MainViewModel.PhoneticsText):
-				_phoneLabel.Text = _vm.PhoneticsText;
-				break;
-			case nameof(MainViewModel.Translations):
-				RebuildTranslations();
-				break;
-			case nameof(MainViewModel.StatsText):
-				_statsLabel.Text = _vm.StatsText;
-				break;
-			case nameof(MainViewModel.PrevWord):
-			case nameof(MainViewModel.HasPrev):
-				_prevButton.Visible = _vm.HasPrev;
-				_prevButton.Text = $"← {_vm.PrevWord}";
-				break;
-			case nameof(MainViewModel.NextWord):
-			case nameof(MainViewModel.HasNext):
-				_nextButton.Visible = _vm.HasNext;
-				_nextButton.Text = $"{_vm.NextWord} →";
-				break;
-			case nameof(MainViewModel.RoundFinished):
-				UpdateWordDisplay();
-				_restartButton.Visible = _vm.RoundFinished;
-				if (_vm.RoundFinished)
-					_restartButton.GrabFocus();
-				break;
+			_lastWord = _vm.Word;
+			RebuildTranslations();
 		}
 	}
 
-	// —— 渲染 ——
-
+	/// <summary>按输入进度渲染单词：已输入按对错配色、待输入处显示光标下划线、其余灰色；判定后整词上色。</summary>
 	private void UpdateWordDisplay()
 	{
 		if (_vm.RoundFinished || _vm.ShowPlain)
@@ -140,35 +122,39 @@ public partial class MainView : Control
 			_wordLabel.Text = $"[center]{_vm.Word}[/center]";
 			return;
 		}
-		string target = _vm.Word;
 		var sb = new StringBuilder("[center]");
 		if (_vm.Judged)
 		{
 			// 判定后整词按对错上色
 			string revealColor = _vm.Result == ResultKind.Correct ? ColorCorrect : ColorReveal;
-			foreach (char c in target)
+			foreach (char c in _vm.Word)
 				sb.Append($"[color={revealColor}]{c}[/color]");
 		}
 		else
 		{
 			string typed = _vm.TypedText;
-			for (int i = 0; i < target.Length; i++)
+			for (int i = 0; i < _vm.Word.Length; i++)
 			{
 				if (i < typed.Length)
 				{
-					string col = typed[i] == target[i] ? ColorCorrect : ColorWrong;
-					sb.Append($"[color={col}]{target[i]}[/color]");
+					string col = typed[i] == _vm.Word[i] ? ColorCorrect : ColorWrong;
+					sb.Append($"[color={col}]{_vm.Word[i]}[/color]");
 				}
 				else if (i == typed.Length)
-					sb.Append($"[u][color={ColorCaret}]{target[i]}[/color][/u]");
+				{
+					sb.Append($"[u][color={ColorCaret}]{_vm.Word[i]}[/color][/u]");
+				}
 				else
-					sb.Append($"[color={ColorPending}]{target[i]}[/color]");
+				{
+					sb.Append($"[color={ColorPending}]{_vm.Word[i]}[/color]");
+				}
 			}
 		}
 		sb.Append("[/center]");
 		_wordLabel.Text = sb.ToString();
 	}
 
+	/// <summary>按判定结果显示文案与颜色：正确、错误（附正确答案）或清空。</summary>
 	private void UpdateResult()
 	{
 		switch (_vm.Result)
@@ -187,6 +173,7 @@ public partial class MainView : Control
 		}
 	}
 
+	/// <summary>清空并按当前词的译文列表重建译文区标签。</summary>
 	private void RebuildTranslations()
 	{
 		foreach (var child in _transBox.GetChildren())

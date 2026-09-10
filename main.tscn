@@ -1,17 +1,17 @@
-[gd_scene format=3 uid="uid://bj8wj5pfsuqhq"]
+[gd_scene load_steps=2 format=3]
 
-[ext_resource type="Script" path="res://View/MainView.cs" id="1_main"]
+[ext_resource type="Script" path="res://View/LibrarySelectView.cs" id="1_sel"]
 
-[node name="Main" type="Control" unique_id=1820159076]
+[node name="Main" type="Control"]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-script = ExtResource("1_main")
+script = ExtResource("1_sel")
 
-[node name="Background" type="ColorRect" parent="." unique_id=291214874]
+[node name="Background" type="ColorRect" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -20,102 +20,54 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0.08, 0.1, 0.14, 1)
 
-[node name="Margin" type="MarginContainer" parent="." unique_id=596954]
+[node name="Center" type="CenterContainer" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/margin_left = 120
-theme_override_constants/margin_top = 50
-theme_override_constants/margin_right = 120
-theme_override_constants/margin_bottom = 50
 
-[node name="VBox" type="VBoxContainer" parent="Margin" unique_id=1345518070]
+[node name="VBox" type="VBoxContainer" parent="Center"]
 layout_mode = 2
 theme_override_constants/separation = 20
-alignment = 1
 
-[node name="ProgressLabel" type="Label" parent="Margin/VBox" unique_id=814506486]
+[node name="Title" type="Label" parent="Center/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 40
+text = "词库打字练习"
+horizontal_alignment = 1
+
+[node name="Hint" type="Label" parent="Center/VBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.55, 0.6, 0.68, 1)
 theme_override_font_sizes/font_size = 20
-text = "第 1 / 3 个"
+text = "选择一个词库 JSON 文件开始"
 horizontal_alignment = 1
 
-[node name="NeighborBox" type="HBoxContainer" parent="Margin/VBox"]
-layout_mode = 2
-theme_override_constants/separation = 40
-
-[node name="PrevButton" type="LinkButton" parent="Margin/VBox/NeighborBox"]
-visible = false
-layout_mode = 2
-theme_override_colors/font_color = Color(0.55, 0.6, 0.68, 1)
-theme_override_colors/font_hover_color = Color(0.82, 0.9, 1, 1)
-theme_override_colors/font_pressed_color = Color(0.65, 0.72, 0.85, 1)
-theme_override_font_sizes/font_size = 22
-underline = 1
-focus_mode = 0
-mouse_default_cursor_shape = 2
-
-[node name="Spacer" type="Control" parent="Margin/VBox/NeighborBox"]
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="NextButton" type="LinkButton" parent="Margin/VBox/NeighborBox"]
-visible = false
-layout_mode = 2
-theme_override_colors/font_color = Color(0.55, 0.6, 0.68, 1)
-theme_override_colors/font_hover_color = Color(0.82, 0.9, 1, 1)
-theme_override_colors/font_pressed_color = Color(0.65, 0.72, 0.85, 1)
-theme_override_font_sizes/font_size = 22
-underline = 1
-focus_mode = 0
-mouse_default_cursor_shape = 2
-
-[node name="WordLabel" type="RichTextLabel" parent="Margin/VBox" unique_id=33611433]
-layout_mode = 2
-theme_override_font_sizes/normal_font_size = 48
-bbcode_enabled = true
-fit_content = true
-scroll_active = false
-
-[node name="TransBox" type="VBoxContainer" parent="Margin/VBox" unique_id=1202654289]
-layout_mode = 2
-theme_override_constants/separation = 6
-
-[node name="PhoneLabel" type="Label" parent="Margin/VBox" unique_id=1842650375]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.45, 0.55, 0.75, 1)
-theme_override_font_sizes/font_size = 22
-text = "英 'kænsl    美 'kænsl"
-horizontal_alignment = 1
-
-[node name="SpeakButton" type="Button" parent="Margin/VBox"]
-layout_mode = 2
-size_flags_horizontal = 4
-focus_mode = 0
-mouse_default_cursor_shape = 2
-theme_override_font_sizes/font_size = 20
-text = "▶ 朗读"
-
-[node name="ResultLabel" type="Label" parent="Margin/VBox" unique_id=1498921333]
-layout_mode = 2
-theme_override_font_sizes/font_size = 24
-text = "✔ 正确"
-horizontal_alignment = 1
-
-[node name="StatsLabel" type="Label" parent="Margin/VBox" unique_id=263624928]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.55, 0.6, 0.68, 1)
-theme_override_font_sizes/font_size = 20
-text = "正确 0   错误 0"
-horizontal_alignment = 1
-
-[node name="RestartButton" type="Button" parent="Margin/VBox" unique_id=94072078]
-visible = false
+[node name="DefaultButton" type="Button" parent="Center/VBox"]
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_font_sizes/font_size = 22
-text = "再来一轮"
+text = "默认词库（words.json）"
+
+[node name="PickButton" type="Button" parent="Center/VBox"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 22
+text = "选择 JSON 文件…"
+
+[node name="ErrorLabel" type="Label" parent="Center/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.35, 0.3, 1)
+theme_override_font_sizes/font_size = 20
+text = ""
+horizontal_alignment = 1
+
+[node name="FileDialog" type="FileDialog" parent="."]
+title = "选择词库 JSON"
+size = Vector2i(900, 560)
+ok_button_text = "选择"
+file_mode = 0
+access = 2
+filters = PackedStringArray("*.json")
